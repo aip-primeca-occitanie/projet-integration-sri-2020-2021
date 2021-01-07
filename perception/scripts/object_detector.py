@@ -17,7 +17,7 @@ def template_matching_detection(inputImage):
     npSegmentedInputimage = color_based_detection(npInputimage)
     #print(np.shape(npInputimage))
     npBlurredInputImage = cv2.GaussianBlur(npSegmentedInputimage, (79, 79), 0)
-    npTemplate = cv2.imread('/home/etudiant/ros_integration_ws/src/projet-integration-sri-2020-2021/perception/scripts/cube.png') 
+    npTemplate = cv2.imread('/home/pal/projet_integration_sri_2020_2021/src/projet-integration-sri-2020-2021/perception/scripts/bouleTemp.png') 
     npSegmentedTemplate = color_based_detection(npTemplate)
 
     # Application of the normalized correlation
@@ -50,8 +50,8 @@ def color_based_detection(inputImage):
     # color segmentation boundaries  
     #lower, upper = [51, 0, 102], [100, 51, 200] #sac
     #lower, upper = [0, 153, 112], [128, 255,221 ] # boule verte
-    ###iLower, iUpper = [40, 32, 104], [110, 75,255 ] # boule rouge
-    iLower, iUpper = [1, 101, 2], [100, 255,100 ] # cube vert test simulation
+    #iLower, iUpper = [40, 32, 104], [110, 75,255 ] # boule rouge
+    iLower, iUpper = [20,125,20], [120, 206,120 ] # cube vert test simulation
    
     # Create NumPy arrays from the boundaries
     iLower, iUpper = np.array(iLower, dtype = "uint8"), np.array(iUpper, dtype = "uint8")
@@ -155,8 +155,8 @@ def start_node():
     rospy.init_node('main_detect')
     rospy.loginfo('main_detect node started')
     # subscribe to topics 
-    rospy.Subscriber("/xtion/rgb/image_color", Image, process_image)
-    rospy.Subscriber("/xtion/depth_registered/image_raw", Image, process_image_depth)
+    rospy.Subscriber("/xtion/rgb/image_raw", Image, process_image)
+    rospy.Subscriber("/xtion/depth_registered/image", Image, process_image_depth)
 
     rospy.spin()
 
