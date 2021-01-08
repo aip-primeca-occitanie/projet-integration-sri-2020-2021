@@ -2,18 +2,16 @@
 
 import rospy
 import actionlib
-import motion_planning.msg 
-from geometry_msgs.msg import PoseStamped
+from motion_planning.msg import PickUpPoseAction
 from pick_client import MotionPlanning
 
 class MotionPlanningAction(object):
     # create messages that are used to publish feedback/result
     #_feedback = actionlib_tutorials.msg.FibonacciFeedback()
-    _result = motion_planning.msg.PickUpPoseResult()
 
     def __init__(self, name):
         self._action_name = name
-        self._as = actionlib.SimpleActionServer(self._action_name, motion_planning.msg.PickUpPoseAction, execute_cb=self.execute_cb, auto_start = False)
+        self._as = actionlib.SimpleActionServer(self._action_name, PickUpPoseAction, execute_cb=self.execute_cb, auto_start = False)
         self._as.start()
 
     def execute_cb(self, goal):

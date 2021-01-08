@@ -204,8 +204,8 @@ class PickAndPlaceServer(object):
         self.scene.add_box("table", table_pose, (table_depth, table_width, table_height))
 
         # # We need to wait for the object part to appear
-        self.wait_for_planning_scene_object()
-        self.wait_for_planning_scene_object("table")
+        # self.wait_for_planning_scene_object()
+        # self.wait_for_planning_scene_object("table")
 
                 # compute grasps
         possible_grasps = self.sg.create_grasps_from_object_pose(object_pose)
@@ -216,7 +216,8 @@ class PickAndPlaceServer(object):
         rospy.loginfo("Sending goal")
         self.pickup_ac.send_goal(goal)
         rospy.loginfo("Waiting for result")
-        self.pickup_ac.wait_for_result()
+        #self.pickup_ac.wait_for_result()
+        '''
         result = self.pickup_ac.get_result()
         rospy.logdebug("Using torso result: " + str(result))
         rospy.loginfo(
@@ -224,6 +225,8 @@ class PickAndPlaceServer(object):
         str(moveit_error_dict[result.error_code.val]))
 
         return result.error_code.val
+        '''
+        return 1
 
     def place_object(self, object_pose):
         rospy.loginfo("Clearing octomap")

@@ -12,8 +12,11 @@
       <param name="object_depth"  value="0.05" />
   </node>
 
-  <!-- Node exposing service to start looking for the object and trigger the picking -->
-  <node name="pick_client" pkg="motion_planning" type="pick_client.py" output="screen"/>
+  <!-- Node exposing service to start looking for the object and trigger the picking 
+  <node name="pick_client" pkg="motion_planning" type="pick_client.py" output="screen"/>-->
+
+  <!-- Test motion planning client -->
+  <node name="test_client" pkg="motion_planning" type="test_client.py" output="screen"/>
 
   <!-- Node interface motion planning server -->
   <node name="motion_planning_server" pkg="motion_planning" type="motion_planning_server.py" output="screen"/>

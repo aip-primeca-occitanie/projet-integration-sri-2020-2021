@@ -182,9 +182,9 @@ class MotionPlanning(object):
     
     
     def object_detection(self, goal):
-        aruco_pose = goal #rospy.wait_for_message('/aruco_single/pose', PoseStamped)
-        aruco_pose.header.frame_id = self.strip_leading_slash(aruco_pose.header.frame_id)
+        aruco_pose = goal.object_pose #rospy.wait_for_message('/aruco_single/pose', PoseStamped)
         rospy.loginfo("Got: " + str(aruco_pose))
+        aruco_pose.header.frame_id = self.strip_leading_slash(aruco_pose.header.frame_id)
             
         rospy.loginfo("spherical_grasp_gui: Transforming from frame: " +
         aruco_pose.header.frame_id + " to 'base_footprint'")
@@ -247,6 +247,6 @@ class MotionPlanning(object):
 
 if __name__ == '__main__':
     rospy.init_node('pick_aruco_demo')
-    sphere = SphericalService()
+    #sphere = SphericalService()
     rospy.spin()
 
