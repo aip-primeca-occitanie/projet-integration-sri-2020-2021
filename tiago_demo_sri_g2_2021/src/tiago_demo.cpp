@@ -3,25 +3,20 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <tiago_demo_sri_g2_2021/PickUpPoseAction.h>
-#include <tiago_demo_sri_g2_2021/NavigationAction.h>
+#include <navigation/NavigationAction.h>
+#include <navigation/LocalisationAction.h>
 #include <string>
+#include <std_msgs/Int32.h>
 
 
-enum State {IDLE, PICK, PLACE, MOVING_PICK, MOVING_PLACE, DONE, FAIL};
+enum State {IDLE, PICK, PLACE, MOVING_PICK, MOVING_PLACE, DONE, FAIL, PERCEPTION, LOCALISATION};
 State currentState = IDLE;
 bool navServerBusy = false;
 bool pupServerBusy = false;
+bool perceptionServerBusy = false;
+bool locServerBusy = false;
 
-//liste des etat :
-//FAIL = 1;
-//MOVE_PICK = 2;
-//MOVE_PLACE = 3;
-//PICK = 4;
-//PLACE = 5;
-//DONE = 6
-//IDLE = 7;
-
-void navigationCallback(const tiago_demo_sri_g2_2021::NavigationActionResultConstPtr& resultat) 
+void navigationCallback(const navigation::NavigationActionResultConstPtr& resultat) 
 {
 	int resultVal = resultat->result.result_code;
   switch (resultVal)
@@ -29,12 +24,13 @@ void navigationCallback(const tiago_demo_sri_g2_2021::NavigationActionResultCons
 		case 0 :
 			if (currentState == MOVING_PICK)
 			{
-				currentState = PICK;
+				currentState = PERCEPTION;
 			}
 			if (currentState == MOVING_PLACE)
 			{
 				currentState = PLACE;
 			}
+			ROS_INFO("Fin de la tache de NAVIGATION");
 			break;
 
 
@@ -43,6 +39,41 @@ void navigationCallback(const tiago_demo_sri_g2_2021::NavigationActionResultCons
 			break;
 	}
 	navServerBusy = false;			
+}
+
+void localisationCallback(const navigation::LocalisationActionResultConstPtr& resultat) 
+{
+	int resultVal = resultat->result.result_code;
+  switch (resultVal)
+	{
+		case 0 :
+			currentState = MOVING_PICK;
+			ROS_INFO("Fin de la tache de LOCALISATION");
+			break;
+
+		case 1 :
+			currentState = FAIL;
+			break;
+	}
+	locServerBusy = false;			
+}
+
+void perceptionCallback(const std_msgs::Int32ConstPtr& resultat) 
+{
+	int resultVal = resultat->data;
+  switch (resultVal)
+	{
+		case 0 :
+			currentState = PICK;
+			ROS_INFO("Fin de la tache de PERCEPTION");
+			break;
+
+
+		case 1 :
+			currentState = FAIL;
+			break;
+	}
+	perceptionServerBusy = false;			
 }
 
 void pickUpPoseCallback(const tiago_demo_sri_g2_2021::PickUpPoseActionResultConstPtr& resultat) 
@@ -59,6 +90,7 @@ void pickUpPoseCallback(const tiago_demo_sri_g2_2021::PickUpPoseActionResultCons
 			{
 				currentState = DONE;
 			}
+			ROS_INFO("Fin de la tache de PICKANDPLACE");
 			break;
 
 
@@ -83,33 +115,39 @@ int main(int argc, char **argv)
   pickPlaceGoal.item_target.point.y = 0.0;
   pickPlaceGoal.item_target.point.z = -25.0;
 
-	tiago_demo_sri_g2_2021::NavigationGoal navGoalPick;
-  navGoalPick.target.header.frame_id = "baselink";
-  navGoalPick.target.pose.position.x = 20.0;
-  navGoalPick.target.pose.position.y = 85.0;
+	navigation::NavigationGoal navGoalPick;
+  navGoalPick.target.header.frame_id = "map";
+  navGoalPick.target.pose.position.x = -3.75;
+  navGoalPick.target.pose.position.y = 3.6;
   navGoalPick.target.pose.position.z = 0.0;
-  navGoalPick.target.pose.orientation.x = 1.0;
-  navGoalPick.target.pose.orientation.y = 2.0;
+  navGoalPick.target.pose.orientation.x = 0.0;
+  navGoalPick.target.pose.orientation.y = 0.0;
   navGoalPick.target.pose.orientation.z = 0.0;
   navGoalPick.target.pose.orientation.w = 1.0;
 
-	tiago_demo_sri_g2_2021::NavigationGoal navGoalPlace;
-  navGoalPlace.target.header.frame_id = "baselink";
-  navGoalPlace.target.pose.position.x = 0.0;
-  navGoalPlace.target.pose.position.y = 0.0;
+	navigation::NavigationGoal navGoalPlace;
+	navGoalPlace.target.header.frame_id = "map";
+  navGoalPlace.target.pose.position.x = -2.3;
+  navGoalPlace.target.pose.position.y = 6.39;
   navGoalPlace.target.pose.position.z = 0.0;
-  navGoalPlace.target.pose.orientation.x = 2.0;
-  navGoalPlace.target.pose.orientation.y = 1.0;
+  navGoalPlace.target.pose.orientation.x = 0.0;
+  navGoalPlace.target.pose.orientation.y = 0.0;
   navGoalPlace.target.pose.orientation.z = 0.0;
   navGoalPlace.target.pose.orientation.w = 1.0;
+
+	navigation::LocalisationGoal locGoal;
+  locGoal.target = 0;
 
 	// create the pickUpPose action client
   // true causes the client to spin its own thread
   actionlib::SimpleActionClient<tiago_demo_sri_g2_2021::PickUpPoseAction> pupac("pickuppose", true);
 
+	// true causes the client to spin its own thread
+  actionlib::SimpleActionClient<navigation::LocalisationAction> locac("localisation", true);
+
   // create the navigation action client
   // true causes the client to spin its own thread
-  actionlib::SimpleActionClient<tiago_demo_sri_g2_2021::NavigationAction> navac("navigation", true);
+  actionlib::SimpleActionClient<navigation::NavigationAction> navac("navigation", true);
 
 	ROS_INFO("Waiting for pickUpPose action server to start.");
   // wait for the pickUpPose action server to start
@@ -119,23 +157,54 @@ int main(int argc, char **argv)
   // wait for the pickUpPose action server to start
   navac.waitForServer(); //will wait for infinite time
 
-	ros::Subscriber pupsub = n.subscribe("/pickuppose/result", 1000, pickUpPoseCallback);		
-	ros::Subscriber navsub = n.subscribe("/navigation/result", 1000, navigationCallback);
+	ROS_INFO("Waiting for localisation action server to start.");
+  // wait for the pickUpPose action server to start
+  locac.waitForServer(); //will wait for infinite time
+
+	ros::Subscriber pupsub = n.subscribe("/pickuppose/result", 10, pickUpPoseCallback);		
+	ros::Subscriber navsub = n.subscribe("/navigation/result", 10, navigationCallback);
+	ros::Subscriber locsub = n.subscribe("/localisation/result", 10, localisationCallback);
+
+	ros::Publisher perception_pub = n.advertise<std_msgs::Int32>("/perception/result", 10);
+  ros::Subscriber perceptionsub = n.subscribe("/perception/result", 10, perceptionCallback);
+
+	//ros::Publisher loc_pub = n.advertise<std_msgs::Int32>("/localisation/result", 10);
+  //ros::Subscriber locsub = n.subscribe("/localisation/result", 10, localisationCallback);
 	
+	std_msgs::Int32 defaultValue;
+	defaultValue.data = 0;
 
   ros::Rate loop_rate(10);
   while (ros::ok())
   {
-
 		switch (currentState)
 		{
 			case IDLE:
-				currentState = MOVING_PICK;
+				currentState = LOCALISATION;
+				break;
+
+			case LOCALISATION:
+				if (!locServerBusy)
+				{
+					ROS_INFO("Lancement de la tache de LOCALISATION");
+					locac.sendGoal(locGoal);
+					locServerBusy = true;
+				}
+				break;
+
+			case PERCEPTION:
+				if (!perceptionServerBusy)
+				{
+					ROS_INFO("Lancement de la tache de PERCEPTION");
+					perception_pub.publish(defaultValue);
+					perceptionServerBusy = true;
+				}
 				break;
 
 			case MOVING_PICK:
 				if (!navServerBusy)
 				{
+					ROS_INFO("Lancement de la tache de NAVIGATION pour aller SAISIR objet");
 					navac.sendGoal(navGoalPick);
 					navServerBusy = true;
 				}
@@ -144,6 +213,7 @@ int main(int argc, char **argv)
 			case MOVING_PLACE:
 					if (!navServerBusy)
 					{
+						ROS_INFO("Lancement de la tache de NAVIGATION pour aller DEPOSER objet");
 						navac.sendGoal(navGoalPlace);
 						navServerBusy = true;
 					}
@@ -152,6 +222,7 @@ int main(int argc, char **argv)
 			case PLACE:
 				if (!pupServerBusy)
 				{
+					ROS_INFO("Lancement de la tache de PICKANDPLACE pour DEPOSER objet");
 					pupac.sendGoal(pickPlaceGoal);
 					pupServerBusy = true;
 				}
@@ -160,6 +231,7 @@ int main(int argc, char **argv)
 			case PICK:
 				if (!pupServerBusy)
 				{
+					ROS_INFO("Lancement de la tache de PICKANDPLACE pour SAISIR objet");
 					pupac.sendGoal(pickPlaceGoal);
 					pupServerBusy = true;
 				}
